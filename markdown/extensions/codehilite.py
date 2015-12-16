@@ -55,8 +55,10 @@ class CodeHilite(object):
 
     * src: Source string or any object with a .readline attribute.
 
-    * linenums: (Boolean) Set line numbering to 'on' (True),
+    * linenums: (Boolean or Integer) Set line numbering to 'on' (True),
       'off' (False) or 'auto'(None). Set to 'auto' by default.
+      If set a integer, set line numbering to 'on' and line number starts
+      with it.
 
     * guess_lang: (Boolean) Turn language auto-detection
       'on' or 'off' (on by default).
@@ -114,8 +116,10 @@ class CodeHilite(object):
                         lexer = get_lexer_by_name('text')
                 except ValueError:
                     lexer = get_lexer_by_name('text')
+            linenostart = self.linenums if isinstance(self.linenums, int) else 1
             formatter = get_formatter_by_name('html',
                                               linenos=self.linenums,
+                                              linenostart=linenostart,
                                               cssclass=self.css_class,
                                               style=self.style,
                                               noclasses=self.noclasses,
