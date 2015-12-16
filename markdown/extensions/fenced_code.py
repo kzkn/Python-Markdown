@@ -39,7 +39,9 @@ class FencedBlockPreprocessor(Preprocessor):
 (?P<fence>^(?:~{3,}|`{3,}))[ ]*         # Opening ``` or ~~~
 (\{?\.?(?P<lang>[a-zA-Z0-9_+-]*))?[ ]*  # Optional {, and lang
 # Optional highlight lines, single- or double-quote-delimited
-(hl_lines=(?P<quot>"|')(?P<hl_lines>.*?)(?P=quot))?[ ]*
+(hl_lines=(?P<quot1>"|')(?P<hl_lines>.*?)(?P=quot1))?[ ]*
+# Optional line numbers, starts with single- or double-quote-delimited number
+(linenums=(?P<quot2>"|')(?P<lines_from>\d+)(?P=quot2))?[ ]*
 }?[ ]*\n                                # Optional closing }
 (?P<code>.*?)(?<=\n)
 (?P=fence)[ ]*$''', re.MULTILINE | re.DOTALL | re.VERBOSE)
@@ -75,9 +77,10 @@ class FencedBlockPreprocessor(Preprocessor):
                 # If config is not empty, then the codehighlite extension
                 # is enabled, so we call it to highlight the code
                 if self.codehilite_conf:
+                    lines_from = self._parse_lines_from(m.group('lines_from'))
                     highliter = CodeHilite(
                         m.group('code'),
-                        linenums=self.codehilite_conf['linenums'][0],
+                        linenums=(lines_from or self.codehilite_conf['linenums'][0]),
                         guess_lang=self.codehilite_conf['guess_lang'][0],
                         css_class=self.codehilite_conf['css_class'][0],
                         style=self.codehilite_conf['pygments_style'][0],
@@ -106,6 +109,15 @@ class FencedBlockPreprocessor(Preprocessor):
         txt = txt.replace('>', '&gt;')
         txt = txt.replace('"', '&quot;')
         return txt
+
+    def _parse_lines_from(self, expr):
+        if not expr:
+            return None
+
+        try:
+            return int(expr)
+        except ValueError:
+            return None
 
 
 def makeExtension(*args, **kwargs):

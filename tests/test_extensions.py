@@ -388,6 +388,75 @@ line 3
                     '#line 3</code></pre>'
                 )
 
+    def testFencedCodeWithLineNumbers(self):
+        """ Test Fenced Code with Line Numbers. """
+
+        text = '''
+```linenums="2"
+line 1
+line 2
+line 3
+```'''
+        md = markdown.Markdown(
+            extensions=[
+                markdown.extensions.codehilite.CodeHiliteExtension(linenums=None, guess_lang=False),
+                'markdown.extensions.fenced_code'
+            ]
+        )
+
+        if self.has_pygments:
+            self.assertTrue(
+                md.convert(text).startswith(
+                    '<table class="codehilitetable"><tr><td class="linenos">'
+                    '<div class="linenodiv"><pre>2\n3'
+                )
+            )
+        else:
+            self.assertEqual(
+                md.convert(text),
+                '<pre class="codehilite"><code class="linenums">line 1\n'
+                'line 2\n'
+                'line 3</code></pre>'
+            )
+
+    def testFencedLanguageAndLineNumbers(self):
+        """ Test Fenced Code with Line Numbers. """
+
+        text0 = '''
+```.python linenums="1"
+#line 1
+#line 2
+#line 3
+```'''
+        text1 = '''
+~~~{.python linenums='1'}
+#line 1
+#line 2
+#line 3
+~~~
+'''
+        for text in (text0, text1):
+            md = markdown.Markdown(
+                extensions=[
+                    markdown.extensions.codehilite.CodeHiliteExtension(linenums=None, guess_lang=False),
+                    'markdown.extensions.fenced_code'
+                ]
+            )
+
+            if self.has_pygments:
+                self.assertTrue(
+                    md.convert(text).startswith(
+                        '<table class="codehilitetable"><tr><td class="linenos">'
+                    )
+                )
+            else:
+                self.assertEqual(
+                    md.convert(text),
+                    '<pre class="codehilite"><code class="language-python">#line 1\n'
+                    '#line 2\n'
+                    '#line 3</code></pre>'
+                )
+
 
 class TestHeaderId(unittest.TestCase):
     """ Test HeaderId Extension. """
