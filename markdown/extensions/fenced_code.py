@@ -23,6 +23,53 @@ from .codehilite import CodeHilite, CodeHiliteExtension, parse_hl_lines
 import re
 
 
+__LABEL_RE = re.compile(r'''[a-zA-Z0-9_+-]+''')
+__VALUE_RE = re.compile(r'''(?P<quot>"|')(?P<value>.*)(?P=quot)''')
+
+
+def __truncate_brackets(s):
+    if len(s) >= 2 and s[0] == '{' and s[-1] == '}':
+        return s[1:-1]
+    else:
+        return s
+
+
+def __truncate_dot(s):
+    if len(s) >= 1 and s[0] == '.':
+        return s[1:]
+    else:
+        return s
+
+
+def __do_parse(string):
+    while True:
+        m = __LABEL_RE.search(string)
+        if not m:
+            return
+
+        label = m.group()
+        string = string[m.end():].lstrip()
+        if len(string) > 0 and string[0] == '=':
+            m = __VALUE_RE.search(string[1:])
+            if m:
+                value = m.group('value')
+                string = string[m.end():].lstrip()
+                yield label, value
+        else:
+            yield 'lang', label
+
+
+def parse_options(string):
+    string = string.strip()
+    string = __truncate_brackets(string)
+    string = __truncate_dot(string)
+
+    opts = dict()
+    for k, v in __do_parse(string):
+        opts[k] = v
+    return opts
+
+
 class FencedCodeExtension(Extension):
 
     def extendMarkdown(self, md, md_globals):
@@ -37,10 +84,7 @@ class FencedCodeExtension(Extension):
 class FencedBlockPreprocessor(Preprocessor):
     FENCED_BLOCK_RE = re.compile(r'''
 (?P<fence>^(?:~{3,}|`{3,}))[ ]*         # Opening ``` or ~~~
-(\{?\.?(?P<lang>[a-zA-Z0-9_+-]*))?[ ]*  # Optional {, and lang
-# Optional highlight lines, single- or double-quote-delimited
-(hl_lines=(?P<quot>"|')(?P<hl_lines>.*?)(?P=quot))?[ ]*
-}?[ ]*\n                                # Optional closing }
+(?P<options>[a-zA-Z0-9 .{}="'_+-]*)\n
 (?P<code>.*?)(?<=\n)
 (?P=fence)[ ]*$''', re.MULTILINE | re.DOTALL | re.VERBOSE)
     CODE_WRAP = '<pre><code%s>%s</code></pre>'
@@ -68,9 +112,11 @@ class FencedBlockPreprocessor(Preprocessor):
         while 1:
             m = self.FENCED_BLOCK_RE.search(text)
             if m:
+                opts = dict()
                 lang = ''
-                if m.group('lang'):
-                    lang = self.LANG_TAG % m.group('lang')
+                if m.group('options'):
+                    opts = parse_options(m.group('options'))
+                    lang = self.LANG_TAG % opts.get('lang', '')
 
                 # If config is not empty, then the codehighlite extension
                 # is enabled, so we call it to highlight the code
@@ -81,9 +127,9 @@ class FencedBlockPreprocessor(Preprocessor):
                         guess_lang=self.codehilite_conf['guess_lang'][0],
                         css_class=self.codehilite_conf['css_class'][0],
                         style=self.codehilite_conf['pygments_style'][0],
-                        lang=(m.group('lang') or None),
+                        lang=opts.get('lang'),
                         noclasses=self.codehilite_conf['noclasses'][0],
-                        hl_lines=parse_hl_lines(m.group('hl_lines'))
+                        hl_lines=parse_hl_lines(opts.get('hl_lines'))
                     )
 
                     code = highliter.hilite()
