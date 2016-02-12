@@ -19,12 +19,23 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 from . import Extension
 from ..preprocessors import Preprocessor
+from ..util import parseBoolValue
 from .codehilite import CodeHilite, CodeHiliteExtension, parse_hl_lines
 import re
 
 
 __LABEL_RE = re.compile(r'''[a-zA-Z0-9_+-]+''')
 __VALUE_RE = re.compile(r'''(?P<quot>"|')(?P<value>.*)(?P=quot)''')
+
+
+def __identity(x):
+    return x
+
+
+__OPTION_PARSERS = {
+    'hl_lines': __identity,
+    'linenums': parseBoolValue,
+}
 
 
 def __truncate_brackets(s):
@@ -54,7 +65,7 @@ def __do_parse(string):
             if m:
                 value = m.group('value')
                 string = string[m.end():].lstrip()
-                yield label, value
+                yield label, __OPTION_PARSERS.get(label, __identity)(value)
         else:
             yield 'lang', label
 
@@ -123,7 +134,7 @@ class FencedBlockPreprocessor(Preprocessor):
                 if self.codehilite_conf:
                     highliter = CodeHilite(
                         m.group('code'),
-                        linenums=self.codehilite_conf['linenums'][0],
+                        linenums=self._option('linenums', opts),
                         guess_lang=self.codehilite_conf['guess_lang'][0],
                         css_class=self.codehilite_conf['css_class'][0],
                         style=self.codehilite_conf['pygments_style'][0],
@@ -152,6 +163,12 @@ class FencedBlockPreprocessor(Preprocessor):
         txt = txt.replace('>', '&gt;')
         txt = txt.replace('"', '&quot;')
         return txt
+
+    def _option(self, name, inlineOptions):
+        if name in inlineOptions:
+            return inlineOptions.get(name)
+        else:
+            return self.codehilite_conf[name][0]
 
 
 def makeExtension(*args, **kwargs):
