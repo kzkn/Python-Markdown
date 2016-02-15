@@ -65,6 +65,9 @@ class CodeHilite(object):
 
     * hl_lines: (List of integers) Lines to emphasize, 1-indexed.
 
+    * linenumstart: (Integer) Set the line number for the first line
+      (1 by default).
+
     Low Level Usage:
         >>> code = CodeHilite()
         >>> code.src = 'some text' # String or anything with a .readline attr.
@@ -75,7 +78,8 @@ class CodeHilite(object):
 
     def __init__(self, src=None, linenums=None, guess_lang=True,
                  css_class="codehilite", lang=None, style='default',
-                 noclasses=False, tab_length=4, hl_lines=None, use_pygments=True):
+                 noclasses=False, tab_length=4, hl_lines=None, use_pygments=True,
+                 linenumstart=1):
         self.src = src
         self.lang = lang
         self.linenums = linenums
@@ -86,6 +90,7 @@ class CodeHilite(object):
         self.tab_length = tab_length
         self.hl_lines = hl_lines or []
         self.use_pygments = use_pygments
+        self.linenumstart = linenumstart
 
     def hilite(self):
         """
@@ -116,6 +121,7 @@ class CodeHilite(object):
                     lexer = get_lexer_by_name('text')
             formatter = get_formatter_by_name('html',
                                               linenos=self.linenums,
+                                              linenostart=self.linenumstart,
                                               cssclass=self.css_class,
                                               style=self.style,
                                               noclasses=self.noclasses,
@@ -213,7 +219,8 @@ class HiliteTreeprocessor(Treeprocessor):
                     style=self.config['pygments_style'],
                     noclasses=self.config['noclasses'],
                     tab_length=self.markdown.tab_length,
-                    use_pygments=self.config['use_pygments']
+                    use_pygments=self.config['use_pygments'],
+                    linenumstart=self.config['linenumstart']
                 )
                 placeholder = self.markdown.htmlStash.store(code.hilite(),
                                                             safe=True)
@@ -247,7 +254,10 @@ class CodeHiliteExtension(Extension):
             'use_pygments': [True,
                              'Use Pygments to Highlight code blocks. '
                              'Disable if using a JavaScript library. '
-                             'Default: True']
+                             'Default: True'],
+            'linenumstart': [1,
+                             'The line number for the first line. '
+                             'Default: 1']
             }
 
         super(CodeHiliteExtension, self).__init__(*args, **kwargs)
