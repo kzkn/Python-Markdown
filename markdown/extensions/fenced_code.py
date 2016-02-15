@@ -19,6 +19,7 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 from . import Extension
 from ..preprocessors import Preprocessor
+from ..util import parseBoolValue
 from .codehilite import CodeHilite, CodeHiliteExtension, parse_hl_lines
 import re
 
@@ -32,6 +33,11 @@ def __identity(x):
 
 __OPTION_PARSERS = {
     'hl_lines': __identity,
+    'linenums': parseBoolValue,
+    'guess_lang': parseBoolValue,
+    'css_class': __identity,
+    'pygments_style': __identity,
+    'noclasses': parseBoolValue,
 }
 
 
@@ -130,12 +136,12 @@ class FencedBlockPreprocessor(Preprocessor):
                 if self.codehilite_conf:
                     highliter = CodeHilite(
                         m.group('code'),
-                        linenums=self.codehilite_conf['linenums'][0],
-                        guess_lang=self.codehilite_conf['guess_lang'][0],
-                        css_class=self.codehilite_conf['css_class'][0],
-                        style=self.codehilite_conf['pygments_style'][0],
+                        linenums=self._option('linenums', opts),
+                        guess_lang=self._option('guess_lang', opts),
+                        css_class=self._option('css_class', opts),
+                        style=self._option('pygments_style', opts),
                         lang=opts.get('lang'),
-                        noclasses=self.codehilite_conf['noclasses'][0],
+                        noclasses=self._option('noclasses', opts),
                         hl_lines=parse_hl_lines(opts.get('hl_lines'))
                     )
 
@@ -159,6 +165,12 @@ class FencedBlockPreprocessor(Preprocessor):
         txt = txt.replace('>', '&gt;')
         txt = txt.replace('"', '&quot;')
         return txt
+
+    def _option(self, name, inlineOptions):
+        if name in inlineOptions:
+            return inlineOptions.get(name)
+        else:
+            return self.codehilite_conf[name][0]
 
 
 def makeExtension(*args, **kwargs):

@@ -365,6 +365,42 @@ line 3
                     '#line 3</code></pre>'
                 )
 
+    def testFencedCodeWithLineNumbers(self):
+        """ Test Fenced Code with Line Numbers. """
+        text1 = '''
+```linenums="yes"
+line 1
+line 2
+line 3
+```'''
+        text2 = '''
+```linenums="no"
+line 1
+line 2
+line 3
+```'''
+
+        md = markdown.Markdown(
+            extensions=[
+                markdown.extensions.codehilite.CodeHiliteExtension(linenums=None, guess_lang=False),
+                'markdown.extensions.fenced_code'
+            ]
+        )
+
+        for text, yes in [(text1, True), (text2, False)]:
+            if self.has_pygments:
+                expected = '<table class="codehilitetable"><tr><td class="linenos">'
+                if yes:
+                    self.assertTrue(md.convert(text).startswith(expected))
+                else:
+                    self.assertFalse(md.convert(text).startswith(expected))
+            else:
+                expected = '''<pre class="codehilite"><code%s>line 1
+line 2
+line 3</code></pre>'''
+                expected = expected % (' class="linenums"' if yes else '')
+                self.assertEqual(md.convert(text), expected)
+
 
 class TestHeaderId(unittest.TestCase):
     """ Test HeaderId Extension. """
